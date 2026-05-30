@@ -4,6 +4,9 @@ import re
 import streamlit as st
 from langchain_groq import ChatGroq
 
+from data_loader import run_sql_query, query_file
+
+
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
     api_key=st.secrets["GROQ_API_KEY"]
@@ -24,29 +27,24 @@ class DataMetricsAgent:
 
     def ask(self, question):
 
-        prompt = f"""
-        Analyze this question:
-
-        {question}
-
-        Return JSON only.
-        """
-
-        response = llm.invoke(prompt)
-raw = response.content
-
-match = re.search(r"\{.*\}", raw, re.S)
-        plan = json.loads(match.group())
+        # Temporary test plan
+        plan = {
+            "source_type": "sql",
+            "query": "SELECT * FROM sales LIMIT 10",
+            "chart_type": "table"
+        }
 
         source = plan["source_type"]
 
         if source == "sql":
+
             df = run_sql_query(
                 self.sql_engine,
                 plan["query"]
             )
 
         elif source == "excel":
+
             df = query_file(
                 self.excel_files,
                 plan["file_key"],
@@ -55,6 +53,7 @@ match = re.search(r"\{.*\}", raw, re.S)
             )
 
         else:
+
             df = query_file(
                 self.csv_files,
                 plan["file_key"],
@@ -62,9 +61,19 @@ match = re.search(r"\{.*\}", raw, re.S)
                 "csv"
             )
 
-        answer = llm.invoke(
-            f"Explain:\n{df.head(20).to_string()}"
+        response = llm.invoke(
+            f"""
+            Explain this data in simple language.
+
+            User Question:
+            {question}
+
+            Data:
+            {df.head(20).to_string()}
+            """
         )
+
+        answer = response.content
 
         return {
             "success": True,
