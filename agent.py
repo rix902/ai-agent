@@ -5,7 +5,7 @@ import streamlit as st
 from langchain_groq import ChatGroq
 
 llm = ChatGroq(
-    model="llama2:latest",
+    model="llama-3.1-8b-instant",
     api_key=st.secrets["GROQ_API_KEY"]
 )
 
@@ -32,10 +32,10 @@ class DataMetricsAgent:
         Return JSON only.
         """
 
-        raw = llm.invoke(prompt)
+        response = llm.invoke(prompt)
+raw = response.content
 
-        match = re.search(r"\{.*\}", raw, re.S)
-
+match = re.search(r"\{.*\}", raw, re.S)
         plan = json.loads(match.group())
 
         source = plan["source_type"]
