@@ -371,4 +371,6 @@ if prompt := st.chat_input("Ask about your data... (e.g., 'What is total revenue
 
 with open("app.py", "w") as f:
     f.write(streamlit_code.strip())
-
+print("✅ Streamlit app written to 'app.py'")
+print("\n🚀 To launch:")
+print("   streamlit run app.py")
