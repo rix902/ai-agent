@@ -1,16 +1,12 @@
 import json
 import re
 
-from langchain_ollama import OllamaLLM
+import streamlit as st
+from langchain_groq import ChatGroq
 
-from config import *
-from data_loader import *
-
-
-llm = OllamaLLM(
-    model=LLM_MODEL,
-    base_url=OLLAMA_BASE_URL,
-    temperature=0.1
+llm = ChatGroq(
+    model="llama3-8b-8192",
+    api_key=st.secrets["GROQ_API_KEY"]
 )
 
 
