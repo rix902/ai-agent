@@ -1,5 +1,20 @@
-def ask(self, question):
+import pandas as pd
+import streamlit as st
+from langchain_groq import ChatGroq
 
+from data_loader import run_sql_query, query_file
+
+llm = ChatGroq(
+    model="llama-3.1-8b-instant",
+    api_key=st.secrets["GROQ_API_KEY"]
+)
+
+class DataMetricsAgent:
+
+    def __init__(self, sql_engine, excel_files, csv_files):
+        self.sql_engine = sql_engine
+        self.excel_files = excel_files
+        self.csv_files = csv_files
     q = question.lower()
 
     # SALES QUESTIONS
