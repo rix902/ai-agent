@@ -1,83 +1,141 @@
-import json
-import re
+def ask(self, question):
 
-import streamlit as st
-from langchain_groq import ChatGroq
+    q = question.lower()
 
-from data_loader import run_sql_query, query_file
+    # SALES QUESTIONS
+    if "revenue by region" in q:
 
-
-llm = ChatGroq(
-    model="llama-3.1-8b-instant",
-    api_key=st.secrets["GROQ_API_KEY"]
-)
-
-
-class DataMetricsAgent:
-
-    def __init__(
-        self,
-        sql_engine,
-        excel_files,
-        csv_files
-    ):
-        self.sql_engine = sql_engine
-        self.excel_files = excel_files
-        self.csv_files = csv_files
-
-    def ask(self, question):
-
-        # Temporary test plan
         plan = {
             "source_type": "sql",
-            "query": "SELECT * FROM sales LIMIT 10",
-            "chart_type": "table"
+            "query": """
+                SELECT region,
+                       SUM(revenue) AS revenue
+                FROM sales
+                GROUP BY region
+            """,
+            "chart_type": "bar"
         }
 
-        source = plan["source_type"]
+    elif "profit by quarter" in q:
 
-        if source == "sql":
+        plan = {
+            "source_type": "sql",
+            "query": """
+                SELECT quarter,
+                       SUM(profit) AS profit
+                FROM sales
+                GROUP BY quarter
+            """,
+            "chart_type": "line"
+        }
 
-            df = run_sql_query(
-                self.sql_engine,
-                plan["query"]
+    # EMPLOYEE QUESTIONS
+    elif "highest average salary" in q or "average salary" in q:
+
+        import pandas as pd
+
+        df = pd.read_excel(
+            self.excel_files["employees"]
+        )
+
+        df = (
+            df.groupby("department")["salary"]
+            .mean()
+            .reset_index()
+            .sort_values(
+                "salary",
+                ascending=False
             )
+        )
 
-        elif source == "excel":
-
-            df = query_file(
-                self.excel_files,
-                plan["file_key"],
-                plan["query"],
-                "excel"
-            )
-
-        else:
-
-            df = query_file(
-                self.csv_files,
-                plan["file_key"],
-                plan["query"],
-                "csv"
-            )
+        plan = {
+            "source_type": "excel",
+            "chart_type": "bar"
+        }
 
         response = llm.invoke(
             f"""
-            Explain this data in simple language.
+            Answer the question:
 
-            User Question:
             {question}
 
             Data:
-            {df.head(20).to_string()}
+            {df.to_string()}
             """
         )
 
-        answer = response.content
-
         return {
             "success": True,
-            "answer": answer,
+            "answer": response.content,
             "data": df,
             "plan": plan
         }
+
+    # WEBSITE QUESTIONS
+    elif "traffic" in q or "visitor" in q:
+
+        import pandas as pd
+
+        df = pd.read_csv(
+            self.csv_files["web_analytics"]
+        )
+
+        df = (
+            df.groupby("date")["page_views"]
+            .sum()
+            .reset_index()
+        )
+
+        plan = {
+            "source_type": "csv",
+            "chart_type": "line"
+        }
+
+        response = llm.invoke(
+            f"""
+            Answer the question:
+
+            {question}
+
+            Data:
+            {df.head(50).to_string()}
+            """
+        )
+
+        return {
+            "success": True,
+            "answer": response.content,
+            "data": df,
+            "plan": plan
+        }
+
+    else:
+
+        plan = {
+            "source_type": "sql",
+            "query": "SELECT * FROM sales LIMIT 20",
+            "chart_type": "table"
+        }
+
+    df = run_sql_query(
+        self.sql_engine,
+        plan["query"]
+    )
+
+    response = llm.invoke(
+        f"""
+        Answer the question:
+
+        {question}
+
+        Data:
+        {df.to_string()}
+        """
+    )
+
+    return {
+        "success": True,
+        "answer": response.content,
+        "data": df,
+        "plan": plan
+    }
