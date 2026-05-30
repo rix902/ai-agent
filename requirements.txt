@@ -4,5 +4,6 @@ numpy
 plotly
 sqlalchemy
 langchain
-langchain-ollama
+langchain-groq
+groq
 openpyxl
