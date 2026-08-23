@@ -6,7 +6,9 @@ from data_loader import run_sql_query
 
 
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    # llama-3.1-8b-instant was deprecated by Groq (announced 2026-06-17).
+    # openai/gpt-oss-20b is Groq's recommended replacement.
+    model="openai/gpt-oss-20b",
     api_key=st.secrets["GROQ_API_KEY"]
 )
 
@@ -157,23 +159,37 @@ class DataMetricsAgent:
 
             plan = {"chart_type": "table"}
 
-        response = llm.invoke(
-            f"""
-            Answer the user's question based on the data.
+        try:
+            response = llm.invoke(
+                f"""
+                Answer the user's question based on the data.
 
-            Question:
-            {question}
+                Question:
+                {question}
 
-            Data:
-            {df.head(50).to_string(index=False)}
+                Data:
+                {df.head(50).to_string(index=False)}
 
-            Give a concise business-style explanation.
-            """
-        )
+                Give a concise business-style explanation.
+                """
+            )
+            answer = response.content
+        except Exception as e:
+            # Surface a readable error instead of letting the app crash.
+            answer = (
+                "⚠️ The AI model call failed, so here's the raw data instead. "
+                f"(Error: {e})"
+            )
+            return {
+                "success": False,
+                "answer": answer,
+                "data": df,
+                "plan": plan
+            }
 
         return {
             "success": True,
-            "answer": response.content,
+            "answer": answer,
             "data": df,
             "plan": plan
         }
